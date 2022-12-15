@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput} from 'react-native';
+import {Alert, KeyboardAvoidingView, ScrollView, StyleSheet, TextInput} from 'react-native';
 import {
   Constants,
   Colors,
@@ -7,60 +7,163 @@ import {
   Keyboard,
   View,
   Text,
-  TextField,
   Button,
-  ListItem,
+  Icon,
 } from 'react-native-ui-lib';
 import {observer} from 'mobx-react';
 import {useNavigation} from '@react-navigation/native';
 import {NavioScreen} from 'rn-navio';
-
+import { EvilIcons } from '@expo/vector-icons';
 import {services, useServices} from '../services';
 import {useAppearance} from '../utils/hooks';
 import {useStores} from '../stores';
 import { isNull } from 'lodash';
-import { number } from 'yup';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { WeekExpense } from '../stores/weekexpense';
+import { TouchableOpacity } from 'react-native-gesture-handler';
+import { HeaderButton } from '../components/button';
+import { MaterialIcons } from '@expo/vector-icons'; 
+import { Section } from '../components/section';
 
 export type Props = {
-  day?: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+  today?: 'montoday' | 'tuestoday' | 'wednestoday' | 'thurstoday' | 'fritoday' | 'saturtoday' | 'suntoday';
 };
 
-const KeyboardTrackingView = Keyboard.KeyboardTrackingView;
 
-export const Expenses: NavioScreen<Props> = observer(({day = 'error'}) => {
-  useAppearance(); // for Dark Mode
+export const Expenses: NavioScreen<Props> = observer(({today = 'error'}) => {
   const navigation = useNavigation();
-  const {t, navio} = useServices();
   const [trackInteractive, setTrackInteractive] = useState(true);
   const {weekExpenses} = useStores();
+  const {t} = useServices();
+
   const [price, setPrice] = useState("");
-  const [dayExpense, setDayExpense] = useState([0]);
+
+  const isUpdated = weekExpenses?.expenses?.today && weekExpenses.expenses.today.length > 0 ;
+
 
   const addExpense = async (): Promise<void> => {
-    let num = parseFloat(price)
-    if(isNull(num) || isNull(num)){
+    let num = parseFloat(price.replace(",", "."))
+    if(isNaN(num) || isNull(num)){
+      Alert.alert("Valor não valido ou vazio")
       setPrice("")
       return
     }
     weekExpenses.addExpense(num);
+    await storeData(weekExpenses)
     setPrice("")
+    
   };
-  // Start
-  useEffect(() => {
-    configureUI();
-    weekExpenses.set("expenses", {limit: 100, day: [0]})
-    // setDayExpense(weekExpenses.expenses.week[WeekDays.indexOf(day)]);
-    // console.log("weekday", weekExpenses.expenses.week)
-  }, []);
 
-  const ResetDay = () => {
-    weekExpenses.set("expenses", {...weekExpenses.expenses, day: [0]})
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View row>
+          {isUpdated ? <HeaderButton onPress={RemoveLastExpense} label="Undo" /> : ""}
+
+          <HeaderButton onPress={showConfirmRestoreDialog} label={t.do('expense.restore')} /> 
+
+
+          <HeaderButton onPress={showConfirmFlushDialog} label={t.do('expense.flush')} /> 
+          
+        </View>
+      )
+         
+    });
+
+  
+  const getData = async () => {
+      const jsonValue = await AsyncStorage.getItem('@expenses')
+       const value = jsonValue != null ? JSON.parse(jsonValue) : null;
+       if (value) {
+        console.log("Return stored value", value)
+        weekExpenses.set("expenses", value)
+       }
+  }
+
+  getData().catch(console.error);;
+  }, [])
+ 
+  const RestoreStorage = async() => {
+    const jsonValue = await AsyncStorage.getItem('@expenses')
+    const value = jsonValue != null ? JSON.parse(jsonValue) : null;
+    if (value) {
+      console.log("Restore stored object", value)
+      weekExpenses.set("expenses", value)
+    }
+
+
+}
+
+  const showConfirmRestoreDialog = () => {
+    return Alert.alert(
+      t.do('expense.confirmRestoreDialog.title'),
+      t.do('expense.confirmRestoreDialog.description'),
+      [
+        // The "Yes" button
+        {
+          text: "Yes",
+          onPress: async () => {
+            await RestoreStorage();
+          },
+        },
+        // The "No" button
+        // Does nothing but dismiss the dialog when tapped
+        {
+          text: "No",
+        },
+      ]
+    );
+  }
+
+  const showConfirmFlushDialog = () => {
+    return Alert.alert(
+      t.do('expense.confirmFlushDialog.title'),
+      t.do('expense.confirmFlushDialog.description'),
+      [
+        // The "Yes" button
+        {
+          text:  t.do('expense.yes'),
+          onPress: async () => {
+            await FlushCache();
+          },
+        },
+        // The "No" button
+        // Does nothing but dismiss the dialog when tapped
+        {
+          text: t.do('expense.no'),
+        },
+      ]
+    );
+  };
+
+
+  const FlushCache = async () => {
+      await AsyncStorage.clear()
+      ResetToday()
+
+  }
+
+  const storeData = async (value: WeekExpense) => {
+    try {
+      const jsonValue = JSON.stringify(value.expenses)
+      await AsyncStorage.setItem('@expenses', jsonValue)
+    } catch (e) {
+      Alert.alert("error on trying storage")
+    }
+  }
+  
+  const RemoveLastExpense= () => {
+    weekExpenses.removeLastExpense()
+  }
+
+  const ResetToday = () => {
+    weekExpenses.set("expenses", {...weekExpenses.expenses, today: [0]})
   }
 
   const renderSum = () => {
-    if (weekExpenses?.expenses?.day && weekExpenses?.expenses?.day.length > 0) {
-      const sum = weekExpenses.expenses.day.reduce((agg, curr) => agg+curr)
-      const rest = (weekExpenses.expenses.limit - sum).toFixed(2)
+    if (weekExpenses?.expenses?.today && weekExpenses?.expenses?.today.length > 0) {
+      const sum = weekExpenses.expenses.today.reduce((agg, curr) => agg+curr)
+      const rest = (weekExpenses.expenses.limit - (sum || 0)).toFixed(2)
       return (
         <Text color={Colors.red20}>R$ {sum.toFixed(2).replace(".", ",")} ({rest.replace(".", ",")})</Text>
       )
@@ -69,43 +172,46 @@ export const Expenses: NavioScreen<Props> = observer(({day = 'error'}) => {
       <Text color={Colors.red20}>R$ 0,00</Text>
 
     )
-    
   }
-  // UI Methods
-  const configureUI = () => {
-    navigation.setOptions({});
-  };
 
   return (
     <View flex bg-bgColor>
+      <View flex>
       <ScrollView
         contentInsetAdjustmentBehavior="always"
         contentContainerStyle={styles.scrollContainer}
-        keyboardDismissMode={trackInteractive ? 'interactive' : 'none'}
+        keyboardDismissMode={'interactive'}
         showsVerticalScrollIndicator={false}
       >
-        {(weekExpenses?.expenses?.day && weekExpenses.expenses.day.length > 0) && (
-          weekExpenses.expenses.day.map((item, index) => {
+       <View paddingV-s1 marginB-30>
+        {(weekExpenses?.expenses?.today && weekExpenses.expenses.today.length > 0) && (
+          weekExpenses.expenses.today.slice().reverse().map((item, index) => {
             return (!isNaN(item) && !isNull(item)) && item > 0 && (
-              <View key={index} style={styles.listItem}>
+              <View key={index} style={styles.listItem} row br20
+              marginB-s2
+              padding-s2>
                 <Text>R$ {item.toFixed(2).replace(".", ",")} </Text>
+
               </View>
               )
           })
         )
 
         }
+        </View>
       </ScrollView>
+      <Text>a</Text>
+      </View>
       <KeyboardAvoidingView style={styles.trackingToolbarContainer} behavior="padding">
-        <View bg-bgColor row spread centerV paddingH-s5 paddingV-s3>
+        <View bg-bg2Color row spread centerV paddingH-s5 paddingV-s3>
         {renderSum()}
-          <Button label="Reset" onPress={ResetDay} />
         </View>
         <View bg-bgColor row spread centerV paddingH-s5 paddingV-s3>
           <TextInput
             keyboardType="numeric"
             style={styles.textField}
-            placeholder={'Price'}
+            placeholder={t.do('expense.price')}
+
             value={price}
             onChangeText={(value: any) => setPrice(value)}
           />
@@ -118,7 +224,7 @@ export const Expenses: NavioScreen<Props> = observer(({day = 'error'}) => {
 
 Expenses.options = props => ({
   headerBackTitleStyle: false,
-  title: `${(props?.route?.params as Props)?.day ? services.t.do(`section.week.days.${(props?.route?.params as Props)?.day}`) : 'Gasto Hoje'}`,
+  title: `${(props?.route?.params as Props)?.today ? services.t.do(`section.week.todays.${(props?.route?.params as Props)?.today}`) : services.t.do('expense.title')}`,
 });
 
 const styles = StyleSheet.create({
@@ -127,6 +233,8 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 1,
     backgroundColor: Colors.grey20,
+    justifyContent: "space-between",
+    display: "flex"
   },
   scrollContainer: {
     paddingHorizontal: Spacings.s5,
@@ -139,7 +247,7 @@ const styles = StyleSheet.create({
   },
   textField: {
     flex: 1,
-    color: Colors.$textDefault,
+    color: Colors.textColor,
     backgroundColor: Colors.bg2Color,
     paddingVertical: Spacings.s3,
     paddingHorizontal: Spacings.s4,

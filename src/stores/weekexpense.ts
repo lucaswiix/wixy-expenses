@@ -4,7 +4,7 @@ import {hydrateStore, makePersistable} from 'mobx-persist-store';
 export class WeekExpense implements IStore {
   expenses = {
     limit: 0,
-    day:[0]
+    today:[0]
   };
 
   constructor() {
@@ -27,7 +27,13 @@ export class WeekExpense implements IStore {
   }
   addExpense(value:number){
     console.log("callme")
-    this.expenses.day.push(value)
+    this.expenses.today.push(value)
+  }
+
+  removeLastExpense() {
+    if (this.expenses.today.length > 1){
+      this.expenses.today.pop()
+    }
   }
   // Hydration
   hydrate = async (): PVoid => {

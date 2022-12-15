@@ -3,10 +3,27 @@ export const en = {
     title: 'Home',
   },
   settings: {
+    save: "Save",
     title: 'Settings',
+    limits: "Limits",
+    dailyLimit: "Daily value",
   },
-  example: {
-    title: 'Example',
+  expense: {
+    title: "Today expenses",
+    restore: "Restore",
+    flush: "Flush",
+    price: "Price",
+    undo: "Undo",
+    yes: "Yes",
+    no: "No",
+    confirmFlushDialog: {
+      title: "Are you want FLUSH?",
+      description: "Are you sure you want to flush the storage of expenses?"
+    },
+    confirmRestoreDialog: {
+      title: "Are you want RESTORE?",
+      description: "Are you sure you want to restore the storage of expenses?"
+    },
   },
   section: {
     navio: {
@@ -40,11 +57,29 @@ export const pt = {
     title: 'Wixy',
   },
   settings: {
+    save: "Salvar",
     title: 'Configurações',
+    limits: "Limites",
+    dailyLimit: "Valor diário",
   },
-  example: {
-    title: 'Exemplo',
+  expense: {
+    title: 'Gastos de hoje',
+    restore: "Restaurar",
+    flush: "Limpar",
+    price: "Preço",
+    undo: "Undo",
+    yes: "Sim",
+    no: "Não",
+    confirmFlushDialog: {
+      title: "Você deseja LIMPAR?",
+      description: "Esta ação irá apagar o cache de armazenamento. não poderá ser desfeito."
+    },
+    confirmRestoreDialog: {
+      title: "Você deseja RESTAURAR?",
+      description: "Está ação irá restaurar os dados do cache, as despesas atuais serão apagadas."
+    },
   },
+
   section: {
     navio: {
       title: 'Navio',

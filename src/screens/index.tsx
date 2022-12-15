@@ -11,7 +11,6 @@ import {screenDefaultOptions, tabDefaultOptions, getTabBarIcon} from '../utils/d
 // NAVIO
 export const navio = Navio.build({
   screens: {
-    Main,
     Expenses,
     Settings,
     Playground: {
@@ -22,7 +21,7 @@ export const navio = Navio.build({
     },
   },
   stacks: {
-    MainStack: ['Main', 'Expenses'],
+    MainStack: ['Expenses'],
     ExampleStack: ['Expenses'],
   },
   tabs: {
@@ -32,13 +31,6 @@ export const navio = Navio.build({
         title: 'Expenses',
         tabBarIcon: getTabBarIcon('MainTab'),
       },
-    },
-    PlaygroundTab: {
-      stack: ['Playground'],
-      options: () => ({
-        title: 'Playground',
-        tabBarIcon: getTabBarIcon('PlaygroundTab'),
-      }),
     },
     SettingsTab: {
       stack: ['Settings'],

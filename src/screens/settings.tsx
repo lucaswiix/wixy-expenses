@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
-import {ScrollView} from 'react-native';
-import {Text, View, SegmentedControl, Colors} from 'react-native-ui-lib';
+import {ScrollView, StyleSheet, TextInput, TouchableOpacity} from 'react-native';
+import {Text, View, SegmentedControl, Colors, Spacings} from 'react-native-ui-lib';
 import {observer} from 'mobx-react';
 import {useNavigation} from '@react-navigation/native';
 import {NavioScreen} from 'rn-navio';
@@ -18,12 +18,16 @@ import {
 import {useAppearance} from '../utils/hooks';
 import {useStores} from '../stores';
 import {HeaderButton} from '../components/button';
-import {services} from '../services';
+import {services, useServices} from '../services';
 
 export const Settings: NavioScreen = observer(({}) => {
   useAppearance();
+  const {ui, weekExpenses} = useStores();
+
+  const [limit, setLimit] = useState(weekExpenses?.expenses?.limit ? weekExpenses?.expenses?.limit.toString().replace(".", ",") : "0,00")
   const navigation = useNavigation();
-  const {ui} = useStores();
+  const {t} = useServices();
+
 
   // State
   const [appearance, setAppearance] = useState(ui.appearance);
@@ -42,7 +46,7 @@ export const Settings: NavioScreen = observer(({}) => {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () =>
-        unsavedChanges ? <HeaderButton onPress={handleSave} label="Save" /> : null,
+        unsavedChanges ? <HeaderButton onPress={handleSave} label={t.do('settings.save')} /> : null,
     });
   }, [unsavedChanges, appearance, language]);
 
@@ -59,9 +63,35 @@ export const Settings: NavioScreen = observer(({}) => {
     });
   };
 
+  const SubmitLimit = () => {
+    let price = limit.replace(",", ".")
+    weekExpenses.set("expenses", {...weekExpenses.expenses, limit: parseFloat(price) })
+  }
   return (
     <View flex bg-bgColor>
       <ScrollView contentInsetAdjustmentBehavior="always">
+        <Section title={t.do('settings.limits')} >
+        <View paddingV-s1>
+            <Row>
+              <View flex>
+                <Text textColor text60R>
+                  {t.do('settings.dailyLimit')}
+                </Text>
+              </View><Text textColor>R$ </Text>
+              <TextInput
+               keyboardType="numeric"
+              style={styles.textField}
+              value={limit}
+              onChangeText={(value: string) => setLimit(value)}
+              />
+              <TouchableOpacity onPress={() => SubmitLimit()} disabled={weekExpenses.expenses.limit == parseFloat(limit.replace(",", "."))}>
+                <Text style={{color: weekExpenses.expenses.limit == parseFloat(limit.replace(",", ".")) ? Colors.black : Colors.primary, marginLeft: 10}}>{t.do('settings.save')}</Text>
+              </TouchableOpacity>
+            
+            </Row>
+
+          </View>
+        </Section>
         <Section title={'UI'}>
           <View paddingV-s1>
             <Row>
@@ -107,4 +137,25 @@ export const Settings: NavioScreen = observer(({}) => {
 });
 Settings.options = () => ({
   title: services.t.do('settings.title'),
+});
+
+
+const styles = StyleSheet.create({
+  button: {
+  },
+  text: {
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: 'bold',
+    letterSpacing: 0.25,
+    color: Colors.primary,
+  },
+  textField: {
+    flex: 1,
+    color: Colors.textColor,
+    backgroundColor: Colors.bg2Color,
+    paddingVertical: Spacings.s3,
+    paddingHorizontal: Spacings.s4,
+    borderRadius: 8,
+  },
 });
